@@ -71,6 +71,7 @@ EOF
 for i in `cat cidr_cn`; do echo ipset -A cidr_cn $i >> ipset.sh; done
 chmod +x ipset.sh
 
+iptables-save > iptables.rules
 }
 
 
@@ -93,6 +94,8 @@ start(){
 
     echo "set iptables ..."
     # iptables
+    iptables -P FORWARD ACCEPT
+
     iptables -t nat -N shadowsocks
 
     iptables -t nat -A shadowsocks -d 0/8 -j RETURN
@@ -151,6 +154,14 @@ stop(){
 
     echo "delete ipset cidr_cn ..."
     ipset destroy cidr_cn
+}
+
+uninstall(){
+    stop
+    rm /etc/sysctl.d/ip_forward
+    rm /usr/local/bin/chinadns
+    mv /etc/dnsmasq.conf{.old,}
+    iptables-restore <iptables.rules
 }
 
 
