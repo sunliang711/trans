@@ -1,4 +1,4 @@
-ipset destroy cidr_cn >/dev/null 2>&1
+ipset destroy cidr_cn
 ipset -N cidr_cn hash:net
 ipset -A cidr_cn 1.0.1.0/24
 ipset -A cidr_cn 1.0.2.0/23

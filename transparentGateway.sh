@@ -1,30 +1,50 @@
 #!/bin/bash
+rpath="$(readlink ${BASH_SOURCE})"
+if [ -z "$rpath" ];then
+    rpath=${BASH_SOURCE}
+fi
+root="$(cd $(dirname $rpath) && pwd)"
+cd "$root"
+shellHeaderLink='https://pic711.oss-cn-shanghai.aliyuncs.com/sh/shell-header.sh'
+if [ -e /etc/shell-header.sh ];then
+    source /etc/shell-header.sh
+else
+    (cd /tmp && wget -q "$shellHeaderLink") && source /tmp/shell-header.sh
+fi
+# write your code below
+
 if (($EUID!=0));then
     echo "Need run as root"
     exit 1
 fi
 
-chinaPort=5354
-chinaDns=114.114.114.114
+if ! command -v nslookup >/dev/null 2>&1;then
+    echo "Need nslookup command!"
+    exit 1
+fi
+if ! command -v ipset >/dev/null 2>&1;then
+    echo "Need ipset command!"
+    exit 1
+fi
+if ! command -v make >/dev/null 2>&1;then
+    echo "Need make command!"
+    exit 1
+fi
+#load settings
+source settings.sh
 
-#ss-redir config
-serverName="g2.2simple.dev"
-serverIp="$(nslookup $serverName|sed -n '4,$p'|grep Address|head -1|awk -F' ' '{print $2}')"
-echo "server ip: $serverIp"
-serverPort=40959
-password=9313866243
-method=aes-256-cfb
+usage(){
+    cat<<-EOF
+	Usage: $(basename $0) CMD
 
-redirLocalAddress=0.0.0.0
-redirLocalPort=1080
-redirMode=tcp_add_udp
-
-#ss-tunnel config
-tunnelLocalAddress=0.0.0.0
-tunnelLocalPort=5300
-tunnelDestAddressPort=8.8.8.8:53
-
-
+	CMD:
+	    start
+	    stop
+	    install
+	    uninstall
+	EOF
+    exit 1
+}
 function getField(){
     name=$1
 }
@@ -51,9 +71,11 @@ install(){
     server=127.0.0.1#${chinaPort}
 EOF
 # chinaDNS
-link="https://github.com/shadowsocks/ChinaDNS/releases/download/1.3.2/chinadns-1.3.2.tar.gz"
 echo "install chinadns to /usr/local/bin ..."
-(cd /tmp && curl -LO "$link" && tar xvf chinadns-1.3.2.tar.gz && cd chinadns-1.3.2 && ./configure && make && cp src/chinadns /usr/local/bin)
+# link="https://github.com/shadowsocks/ChinaDNS/releases/download/1.3.2/chinadns-1.3.2.tar.gz"
+# (cd /tmp && curl -LO "$link" && tar xvf chinadns-1.3.2.tar.gz && cd chinadns-1.3.2 && ./configure && make && cp src/chinadns /usr/local/bin)
+(cp ./chinadns-1.3.2.tar.gz /tmp && cd /tmp && tar xvf chinadns-1.3.2.tar.gz && cd chinadns-1.3.2 && ./configure && make && cp src/chinadns /usr/local/bin)
+
 cp /tmp/chinadns-1.3.2/chnroute.txt .
 
 # ipforward
@@ -175,6 +197,12 @@ case $cmd in
         ;;
     stop)
         stop
+        ;;
+    uninstall)
+        uninstall
+        ;;
+    *)
+        usage
         ;;
 esac
 
